@@ -16,6 +16,49 @@ export async function createUser(name, email, password) {
   };
 }
 
+export async function updateUser(id, updateData) {
+  const { id: _, ...safeUpdateData } = updateData;
+
+  // Remove undefined, null, and empty string values
+  const cleanData = Object.fromEntries(
+    Object.entries(safeUpdateData).filter(
+      ([_, value]) => value !== undefined && value !== null && value !== ""
+    )
+  );
+
+  const user = await prisma.user.update({
+    where: { id },
+    data: cleanData,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      updatedAt: true,
+    },
+  });
+
+  return user;
+}
+
+export async function checkEmailExists(email, excludeUserId) {
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!user) {
+    return false;
+  }
+
+  if (excludeUserId && user.id === excludeUserId) {
+    return false;
+  }
+
+  return true;
+}
+
 export async function getUserByEmail(email, withPassword = false) {
   const user = await prisma.user.findUnique({
     where: { email },
