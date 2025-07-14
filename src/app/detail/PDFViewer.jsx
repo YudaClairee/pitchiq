@@ -1,41 +1,45 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
+import { useState } from 'react';
+
+// Setup worker
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 export default function PDFViewer({ fileUrl }) {
-  const [isClient, setIsClient] = useState(false);
-  const [numPages, setNumPages] = useState();
-  const [Document, setDocument] = useState(null);
-  const [Page, setPage] = useState(null);
-
-  console.log(fileUrl);
-  
-  useEffect(() => {
-    setIsClient(true);
-    
-    import('react-pdf').then(({ pdfjs, Document, Page }) => {
-      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-        'pdfjs-dist/build/pdf.worker.min.mjs',
-        import.meta.url,
-      ).toString();
-      
-      setDocument(() => Document);
-      setPage(() => Page);
-    });
-  }, []);
+  const [numPages, setNumPages] = useState(null);
+  const [error, setError] = useState(null);
 
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
+    setError(null);
   }
 
-  if (!isClient || !Document || !Page) {
-    return <div className="flex items-center justify-center h-96">Loading PDF...</div>;
+  function onDocumentLoadError(error) {
+    console.error('PDF Load Error:', error);
+    setError(error.message);
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 text-red-500">
+        <p>Failed to load PDF: {error}</p>
+        <p className="text-sm mt-2">URL: {fileUrl}</p>
+      </div>
+    );
   }
 
   return (
-    <Document file={fileUrl} onLoadSuccess={onDocumentLoadSuccess}>
-      {Array.from(new Array(numPages), (_, idx) => (
-        <Page key={`page_${idx + 1}`} pageNumber={idx + 1} width={800} />
+    <Document
+      file={fileUrl}
+      onLoadSuccess={onDocumentLoadSuccess}
+      onLoadError={onDocumentLoadError}
+    >
+      {Array.from(new Array(numPages), (_, index) => (
+        <Page key={index} pageNumber={index + 1} width={800} />
       ))}
     </Document>
   );
